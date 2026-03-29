@@ -1545,10 +1545,16 @@ class DebateOrchestrator:
             
             if response.status_code == 200:
                 result = response.json()
-                doc_id = result.get("doc_id")
-                note_url = f"https://ima.qq.com/note/{doc_id}"
-                log.info(f"IMA 笔记创建成功: {note_url}")
-                return note_url
+                if result.get("code") == 0:
+                    data = result.get("data", {})
+                    # 兼容 note_id 和 doc_id
+                    note_id = data.get("note_id") or data.get("doc_id")
+                    if note_id:
+                        note_url = f"https://ima.qq.com/note/{note_id}"
+                        log.info(f"IMA 笔记创建成功: {note_url}")
+                        return note_url
+                log.error(f"IMA API 返回错误: {result}")
+                return None
             else:
                 log.error(f"IMA API 调用失败: {response.status_code} {response.text}")
                 return None

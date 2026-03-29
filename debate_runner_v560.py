@@ -226,6 +226,16 @@ class DebateRunnerV560:
         state["phase"] = "complete"
         self.orchestrator.state_manager.save(state)
         
+        # 同步到 ima 笔记
+        ima_note_url = None
+        if CONFIG.get("auto_ima", True):
+            ima_note_url = self.orchestrator._export_to_ima()
+        
+        # 生成 Info Card
+        info_card_path = None
+        if CONFIG.get("auto_info_card", True):
+            info_card_path = self.orchestrator._generate_info_card()
+        
         return {
             "action": "COMPLETE",
             "reason": reason,
@@ -234,6 +244,8 @@ class DebateRunnerV560:
             "satisfied": satisfied,
             "report_path": str(self.output_dir / "report.md"),
             "output_dir": str(self.output_dir),
+            "ima_note_url": ima_note_url,
+            "info_card_path": info_card_path,
             "hard_threshold_used": SATISFACTION_THRESHOLD_HARD
         }
     
