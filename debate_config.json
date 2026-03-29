@@ -1,0 +1,100 @@
+{
+  "max_iterations": 10,
+  "satisfaction_threshold": 9.5,
+  "rollback_threshold": 0.5,
+  "timeout_seconds": 1800,
+  "auto_ima": true,
+  "auto_info_card": true,
+  "researcher_tools": [
+    "read",
+    "write",
+    "query_financial",
+    "query_cashflow",
+    "query_roic",
+    "query_xueqiu",
+    "search_news",
+    "retrieve_local"
+  ],
+  "reviewer_tools": ["read"],
+  "auto_gist": true,
+  "auto_gist_public": true,
+  "git_enabled": true,
+  "state_persistence": true,
+  "auto_continue": true,
+  "blind_review": true,
+  "_comment": "blind_review=true 表示 Reviewer 不知道当前轮次，完全独立评分",
+  "multi_reviewer": {
+    "enabled": true,
+    "count": 2,
+    "aggregation": "average",
+    "reviewers": [
+      {
+        "name": "Reviewer-A",
+        "model": "qwencode/glm-5",
+        "role": "moat_analyst",
+        "title": "护城河分析师",
+        "focus": "逻辑性 + 护城河深度分析",
+        "description": "基于 Buffett/Morningstar 框架评估企业护城河",
+        "capabilities": {
+          "basic": [
+            "逻辑性：论证链条是否完整，推理是否合理",
+            "论证完整性：是否有逻辑跳跃，结论是否有支撑"
+          ],
+          "professional": [
+            "护城河五层追问：财务数据 → 经营表现 → 经营能力 → 护城河来源 → 不可复制性",
+            "护城河类型识别：网络效应/转换成本/成本优势/无形资产/有效规模",
+            "可持续性评估：短期(1-2年)/中期(2-5年)/长期(5年+)",
+            "管理层评估：资本配置能力、股东回报意愿"
+          ]
+        },
+        "framework": {
+          "buffett_franchise_test": true,
+          "morningstar_moat_rating": true,
+          "five_layer_questioning": true
+        },
+        "scoring_weights": {
+          "logic": 0.25,
+          "moat_depth": 0.30,
+          "sustainability": 0.25,
+          "management": 0.20
+        }
+      },
+      {
+        "name": "Reviewer-B",
+        "model": "qwencode/MiniMax-M2.5",
+        "role": "safety_margin_analyst",
+        "title": "安全边际分析师",
+        "focus": "数据准确性 + 安全边际评估",
+        "description": "基于 Graham 价值投资框架评估安全边际",
+        "capabilities": {
+          "basic": [
+            "数据准确性：关键财务数据是否正确，估算值是否合理",
+            "数据来源：是否标注来源，来源是否可靠"
+          ],
+          "professional": [
+            "安全边际评估：内在价值 vs 当前价格",
+            "内在价值估算：DCF/DDM/可比公司估值",
+            "财务健康度：现金流质量、负债水平、ROIC vs WACC",
+            "风险因素识别：行业风险、公司特有风险、宏观风险"
+          ]
+        },
+        "framework": {
+          "graham_margin_of_safety": true,
+          "intrinsic_value_methods": ["DCF", "DDM", "comparable"],
+          "financial_health_check": true
+        },
+        "scoring_weights": {
+          "data_accuracy": 0.25,
+          "margin_of_safety": 0.30,
+          "financial_health": 0.25,
+          "risk_assessment": 0.20
+        }
+      }
+    ]
+  },
+  "data_tools": {
+    "enabled": true,
+    "akshare_path": "/root/.openclaw/workspace/akshare_docs",
+    "xueqiu_path": "/root/.openclaw/workspace/xueqiu-analyzer-skill/scripts"
+  }
+}

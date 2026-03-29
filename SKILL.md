@@ -3,21 +3,19 @@ name: debate-research-agent
 description: |
   自迭代辩论式研究 Agent。通过 Researcher 和 Reviewer 的辩论式协作，持续完善研究报告。
   
-  V5.6.0 特性（最新版本 - Session 隔离修复）：
+  V5.6.0 特性（最新版本）：
   - **Session 隔离**：通过 sessions_spawn 创建独立 session，不再复用主 session
   - **请求-响应模式**：Python 返回 spawn 请求，主 Agent 调用 sessions_spawn
   - **上下文隔离**：每次 spawn 独立 transcript，不再累积到主 session
   - **硬编码阈值强制执行**：9.5 分阈值无法绕过
-  
-  V5.5.5 特性（强制约束执行）：
-  - **Python 作为执行主体**：不再依赖 LLM 调用 sessions_spawn
-  - **Transcript 真实验证**：session transcript 文件必须存在
+  - **自动同步 ima 笔记**：研究报告自动同步到 ima 笔记
+  - **生成 Info Card**：自动生成研究摘要卡片
   
   触发词：
   - "辩论研究 {主题}"
   - "深度研究 {主题}"
   
-version: 5.6.0
+version: 5.6.1
 author: winterswang
 triggers:
   - pattern: "辩论研究 {topic}"
