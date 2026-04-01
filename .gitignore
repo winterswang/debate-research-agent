@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Output/logs (用户数据)
+output/
+logs/
+
+# 临时文件
+*.tmp
+*.bak
+
+# 分析文档（本地）
+ANALYSIS_*.md
+CODE_REVIEW_*.md
+TODO*.md
+ARCHITECTURE_*.md
+INTEGRATION.md
+USAGE_MODE.md
+REVIEWER_FIX.py
+
+# Archive
+archive/
