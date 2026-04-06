@@ -14,11 +14,25 @@ from pathlib import Path
 # 添加当前目录到 path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from debate_runner_v560 import DebateRunnerV560
+from debate_runner_v560 import DebateRunnerV560, OUTPUT_BASE
+
+# 测试前清理遗留 output 目录
+def cleanup_test_outputs():
+    """清理测试产生的 output 目录"""
+    if OUTPUT_BASE.exists():
+        for d in OUTPUT_BASE.iterdir():
+            if d.is_dir() and d.name.startswith("测试主题"):
+                shutil.rmtree(d)
+
+cleanup_test_outputs()
 
 
 class TestV560Basics:
     """V5.6.0 基本功能测试"""
+    
+    def setup_method(self):
+        """每个测试方法前清理遗留 output 目录"""
+        cleanup_test_outputs()
     
     def test_start_returns_spawn_request(self):
         """测试 start 返回 SPAWN_SUBAGENT 请求"""
@@ -69,55 +83,77 @@ class TestV560Basics:
         print("✅ test_submit_result_returns_next_request 通过")
     
     def test_satisfied_returns_complete(self):
-        """测试满意时返回 COMPLETE"""
+        """测试双 Reviewer 都满意时返回 COMPLETE"""
         runner = DebateRunnerV560(topic="测试主题")
-        
-        # 模拟满意的 Reviewer 结果
-        reviewer_result = json.dumps({
-            "total_score": 9.6,
-            "satisfied": True,
-            "challenges": [],
-            "_signature": "test"
-        })
         
         # 先提交 Researcher 结果
         researcher_result = json.dumps({"report_saved": True})
         runner.submit_spawn_result("researcher", researcher_result)
         
-        # 提交 Reviewer 结果
-        next_request = runner.submit_spawn_result("reviewer", reviewer_result)
+        # 提交第一个 Reviewer 结果（满意）
+        reviewer_a_result = json.dumps({
+            "total_score": 9.6,
+            "satisfied": True,
+            "challenges": [],
+            "_signature": "test-a"
+        })
+        next_request = runner.submit_spawn_result("reviewer", reviewer_a_result)
         
-        # 应该返回 COMPLETE
-        assert next_request["action"] == "COMPLETE", f"期望 COMPLETE，实际 {next_request['action']}"
-        assert next_request["satisfied"] == True, "期望 satisfied=True"
-        assert next_request["final_score"] == 9.6, "期望 final_score=9.6"
+        # 双 Reviewer 模式：第一个完成后应该返回第二个 Reviewer 请求
+        assert next_request["action"] == "SPAWN_SUBAGENT", f"期望第二个 Reviewer，实际 {next_request['action']}"
+        assert next_request["role"] == "reviewer", f"期望 reviewer，实际 {next_request['role']}"
         
-        print("✅ test_satisfied_returns_complete 通过")
+        # 提交第二个 Reviewer 结果（满意）
+        reviewer_b_result = json.dumps({
+            "total_score": 9.5,
+            "satisfied": True,
+            "challenges": [],
+            "_signature": "test-b"
+        })
+        final_request = runner.submit_spawn_result("reviewer", reviewer_b_result)
+        
+        # 两个都满意后应该返回 COMPLETE
+        assert final_request["action"] == "COMPLETE", f"期望 COMPLETE，实际 {final_request['action']}"
+        assert final_request["satisfied"] == True, "期望 satisfied=True"
+        # 平均分 = (9.6 + 9.5) / 2 = 9.55 >= 9.5
+        assert final_request["final_score"] >= 9.5, f"期望 final_score >= 9.5，实际 {final_request['final_score']}"
+        
+        print("✅ test_satisfied_returns_complete 通过（双 Reviewer）")
     
     def test_unsatisfied_returns_next_researcher(self):
-        """测试不满意时返回下一轮 Researcher 请求"""
+        """测试任一 Reviewer 不满意时返回下一轮 Researcher 请求"""
         runner = DebateRunnerV560(topic="测试主题")
         
-        # 模拟不满意的 Reviewer 结果
-        reviewer_result = json.dumps({
+        # 先提交 Researcher 结果
+        researcher_result = json.dumps({"report_saved": True})
+        runner.submit_spawn_result("researcher", researcher_result)
+        
+        # 提交第一个 Reviewer 结果（不满意）
+        reviewer_a_result = json.dumps({
             "total_score": 7.5,
             "satisfied": False,
             "challenges": ["质疑1", "质疑2"]
         })
+        next_request = runner.submit_spawn_result("reviewer", reviewer_a_result)
         
-        # 先提交 Researcher 结果
-        researcher_result = json.dumps({"report_saved": True})
-        runner.submit_spawn_result("researcher", researcher_result)
+        # 双 Reviewer 模式：第一个不满意，继续第二个 Reviewer
+        assert next_request["action"] == "SPAWN_SUBAGENT", f"期望第二个 Reviewer，实际 {next_request['action']}"
+        assert next_request["role"] == "reviewer", f"期望 reviewer，实际 {next_request['role']}"
         
-        # 提交 Reviewer 结果
-        next_request = runner.submit_spawn_result("reviewer", reviewer_result)
+        # 提交第二个 Reviewer 结果（满意，但平均分不够）
+        reviewer_b_result = json.dumps({
+            "total_score": 9.0,
+            "satisfied": True,
+            "challenges": []
+        })
+        final_request = runner.submit_spawn_result("reviewer", reviewer_b_result)
         
-        # 应该返回下一轮 Researcher
-        assert next_request["action"] == "SPAWN_SUBAGENT", f"期望 SPAWN_SUBAGENT，实际 {next_request['action']}"
-        assert next_request["role"] == "researcher", f"期望 researcher，实际 {next_request['role']}"
-        assert next_request["iteration"] == 2, f"期望 iteration=2，实际 {next_request['iteration']}"
+        # 平均分 = (7.5 + 9.0) / 2 = 8.25 < 9.5，返回下一轮 Researcher
+        assert final_request["action"] == "SPAWN_SUBAGENT", f"期望下一轮 Researcher，实际 {final_request['action']}"
+        assert final_request["role"] == "researcher", f"期望 researcher，实际 {final_request['role']}"
+        assert final_request["iteration"] == 2, f"期望 iteration=2，实际 {final_request['iteration']}"
         
-        print("✅ test_unsatisfied_returns_next_researcher 通过")
+        print("✅ test_unsatisfied_returns_next_researcher 通过（双 Reviewer）")
 
 
 class TestV560Isolation:

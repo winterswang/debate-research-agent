@@ -41,13 +41,10 @@ LOGS_DIR = SKILL_DIR / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
 
 # ============== 数据接口集成 ==============
-# 添加 data_collector 到 path
-DATA_COLLECTOR_PATH = str(Path(__file__).parent.parent / "company-deep-analysis")
-if Path(DATA_COLLECTOR_PATH).exists():
-    sys.path.insert(0, DATA_COLLECTOR_PATH)
-    DATA_COLLECTOR_AVAILABLE = True
-else:
-    DATA_COLLECTOR_AVAILABLE = False
+# 内置 data_collector (来自 company-deep-analysis 合并)
+DATA_COLLECTOR_PATH = str(Path(__file__).parent / "data_collector")
+sys.path.insert(0, DATA_COLLECTOR_PATH)
+DATA_COLLECTOR_AVAILABLE = True  # 内置，始终可用
 
 # ============== 日志系统 ==============
 def setup_logger(name: str, log_file: str = None) -> logging.Logger:
@@ -308,25 +305,52 @@ class PromptGenerator:
             for i, c in enumerate(feedback.get("challenges", [])[:5], 1):
                 prompt += f"{i}. {c}\n"
         
-        # 添加数据完整性强制检查
+        # V5.5.3: 添加数据完整性强制检查（更醒目、更强制）
         prompt += """
 
-## ⚠️ 数据完整性强制检查（必须执行）
+## 🚨 数据完整性声明（输出末尾必须包含）
 
-**在使用任何工具返回的数据后，必须在报告中声明**：
+**⚠️ 这是强制要求，缺少此声明将导致评分降低！**
 
-```
-数据完整性声明：
+**必须在报告末尾添加以下格式的声明**：
+
+---
+
+**数据完整性声明**：
 - 工具返回：X 年数据（YYYY-YYYY）
 - 报告使用：X 年数据
-- 数据来源：[工具名称]
-- 完整性：[全部使用 / 部分使用 + 原因]
-```
+- 数据来源：[工具名称1, 工具名称2]
+- 完整性：全部使用 ✅ 或 部分使用（原因：XXX）⚠️
+
+---
+
+**示例（茅台分析）**：
+
+---
+
+**数据完整性声明**：
+- 工具返回：5 年数据（2019-2023）
+- 报告使用：5 年数据
+- 数据来源：query_financial, query_roic
+- 完整性：全部使用 ✅
+
+---
 
 **禁止行为**：
 - ❌ 只使用前 N 行数据而不说明原因
 - ❌ 隐瞒工具返回的数据范围
 - ❌ 在报告中省略数据时间范围
+- ❌ 缺少上述格式的数据完整性声明
+
+**输出格式要求**：
+```json
+{
+  "report_saved": true,
+  "report_path": "...",
+  "tools_called": [...],
+  "confidence": 0.8
+}
+```
 """
         
         return prompt
